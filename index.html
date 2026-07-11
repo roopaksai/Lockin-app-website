@@ -1815,13 +1815,36 @@
         schedule();
       }
 
-      /* ── BGM Toggle Button ── */
+      /* ── BGM Toggle Button + Auto-play ── */
       const btn = document.getElementById('bgmBtn');
       if (btn) {
         btn.addEventListener('click', () => {
-          if (playing) { stop(); btn.classList.remove('playing'); } else { start(); btn.classList.add('playing'); }
+          if (playing) { stop(); btn.classList.remove('playing'); }
+          else { start(); btn.classList.add('playing'); }
         });
-        btn.classList.remove('playing');
+
+        // Auto-start BGM on page load
+        if (getAC()) {
+          playing = true;
+          nextBlock = ac.currentTime;
+          if (masterGain) { try { masterGain.disconnect(); } catch (e) { } }
+          masterGain = ac.createGain();
+          masterGain.gain.value = 1;
+          masterGain.connect(ac.destination);
+          schedule();
+          btn.classList.add('playing');
+
+          // Resume suspended AudioContext on first user interaction
+          if (ac.state === 'suspended') {
+            const resume = () => {
+              ac.resume();
+              document.removeEventListener('click', resume);
+              document.removeEventListener('touchstart', resume);
+            };
+            document.addEventListener('click', resume);
+            document.addEventListener('touchstart', resume);
+          }
+        }
       }
     })();
 
