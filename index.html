@@ -1643,13 +1643,15 @@
     /* ── BGM: Epic Orchestral Loop (Web Audio API) ── */
     (function initBGM() {
       const BPM = 80, BEAT = 60 / BPM, BAR = BEAT * 4, LOOP = BAR * 8;
-      let ac = null, playing = false, timer = null, nextBlock = 0;
+      let ac = null, playing = false, timer = null, nextBlock = 0, masterGain = null;
 
       function getAC() {
         if (!ac) try { ac = new(window.AudioContext || window.webkitAudioContext)(); } catch (e) { }
         if (ac && ac.state === 'suspended') ac.resume();
         return ac;
       }
+
+      function out(g) { if (masterGain) g.connect(masterGain); }
 
       function kick(ctx, t, v) {
         const o = ctx.createOscillator(), g = ctx.createGain();
@@ -1659,7 +1661,7 @@
         g.gain.setValueAtTime(v || .5, t);
         g.gain.exponentialRampToValueAtTime(.001, t + .12);
         o.connect(g);
-        g.connect(ctx.destination);
+        out(g);
         o.start(t);
         o.stop(t + .12);
       }
@@ -1677,7 +1679,7 @@
         g.gain.exponentialRampToValueAtTime(.001, t + .07);
         n.connect(f);
         f.connect(g);
-        g.connect(ctx.destination);
+        out(g);
         n.start(t);
         n.stop(t + .08);
       }
@@ -1695,7 +1697,7 @@
         g.gain.exponentialRampToValueAtTime(.001, t + .02);
         n.connect(f);
         f.connect(g);
-        g.connect(ctx.destination);
+        out(g);
         n.start(t);
         n.stop(t + .03);
       }
@@ -1709,7 +1711,7 @@
         g.gain.linearRampToValueAtTime(v || .12, t + dur - .03);
         g.gain.linearRampToValueAtTime(.001, t + dur);
         o.connect(g);
-        g.connect(ctx.destination);
+        out(g);
         o.start(t);
         o.stop(t + dur);
       }
@@ -1720,7 +1722,7 @@
         g.gain.linearRampToValueAtTime(v || .04, t + .3);
         g.gain.linearRampToValueAtTime(v || .04, t + dur - .5);
         g.gain.linearRampToValueAtTime(.001, t + dur);
-        g.connect(ctx.destination);
+        out(g);
         freqs.forEach((f, i) => {
           const o = ctx.createOscillator();
           o.type = 'sawtooth';
@@ -1742,13 +1744,13 @@
         g.gain.setValueAtTime(v || .025, t);
         g.gain.linearRampToValueAtTime(.001, t + dur);
         o.connect(g);
-        g.connect(ctx.destination);
+        out(g);
         o.start(t);
         o.stop(t + dur);
       }
 
       function schedule() {
-        if (!playing || !ac) return;
+        if (!playing || !ac || !masterGain) return;
         const ctx = ac, now = ctx.currentTime;
         const start = Math.max(now + .02, nextBlock);
         if (start > now + .5) { nextBlock = start; setTimeout(schedule, (start - now) * 1000 - 40); return; }
@@ -1788,9 +1790,30 @@
         timer = setTimeout(schedule, delay);
       }
 
-      function start() { if (!playing && getAC()) { playing = true; nextBlock = ac.currentTime; schedule(); } }
+      function stop() {
+        playing = false;
+        if (timer) { clearTimeout(timer); timer = null; }
+        if (masterGain) {
+          try {
+            const now = ac.currentTime;
+            masterGain.gain.cancelScheduledValues(now);
+            masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+            masterGain.gain.linearRampToValueAtTime(0.001, now + 0.08);
+          } catch (e) { }
+        }
+      }
 
-      function stop() { playing = false; if (timer) { clearTimeout(timer); timer = null; } }
+      function start() {
+        if (playing || !getAC()) return;
+        if (timer) { clearTimeout(timer); timer = null; }
+        if (masterGain) { try { masterGain.disconnect(); } catch (e) { } }
+        masterGain = ac.createGain();
+        masterGain.gain.value = 1;
+        masterGain.connect(ac.destination);
+        playing = true;
+        nextBlock = ac.currentTime;
+        schedule();
+      }
 
       /* ── BGM Toggle Button ── */
       const btn = document.getElementById('bgmBtn');
