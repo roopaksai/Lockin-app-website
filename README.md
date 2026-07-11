@@ -1,29 +1,35 @@
 # Lockin-app-website
 
-Architecture
-1.  NAV                    (glassmorphism, sticky, LOCKIN logo + Download button)
-2.  HER                    (split layout: left text + right phone with comparison slider)
-    ├── Headline: "Your Goal. On Every Unlock."
-    ├── Subtext: one sentence
-    ├── Download CTA (single, primary)
-    └── Phone mockup with draggable slider (1.jpg ↔ 2.jpg)
-    └── Three.js 3D dot grid background (subtle, rotating)
+Landing page for LockIn — a lock screen countdown wallpaper app.
 
-3.  FEATURES               (asymmetric bento grid — NOT 3 cards)
-    ├── Setup Mode card    (normal.jpg large)
-    ├── Progress Mode card (progress.jpg large, offset row)
-    └── Color Customization (settings.jpg full-width)
+## Structure
 
-4.  HOW IT WORKS           (6 steps, vertical timeline, staggered reveal)
-    ├── 1. Set your goal
-    ├── 2. Choose countdown mode
-    ├── 3. Activate live wallpaper
-    ├── 4. Enable Progress Mode (optional)
-    ├── 5. Customize colors
-    └── 6. Add widget
+```
+Lockin-app-website/
+├── assets/          (9 files: 1.jpg, 2.jpg, v1.jpg, v2.jpg, normal.jpg, progress.jpg, settings.jpg, widget.jpg, icon.png)
+├── index.html       (single-page static site, all CSS/JS inline)
+├── vercel.json      (Vercel static site config)
+└── README.md
+```
 
-5.  WIDGET SHOWCASE        (widget.jpg centered, left-aligned text)
+## Sections
 
-6.  FINAL CTA              (big download, trust line: Free · No ads · No account)
+1. **NAV** — glassmorphism, sticky, logo + BGM toggle (♪) + Download CTA
+2. **HERO** — split layout with text + phone comparison slider (v1.jpg ↔ v2.jpg), Three.js 3D dot grid background
+3. **FEATURES** — Setup Mode, Progress Mode (asymmetric bento grid rows)
+4. **HOW IT WORKS** — 6-step vertical timeline with staggered reveal
+5. **CUSTOMIZATION** — standalone section (settings.jpg), two-column grid with badge row
+6. **WIDGET SHOWCASE** — widget.jpg centered, feature badges
+7. **CTA** — primary download button with pulse animation
+8. **FOOTER** — minimal Logo + credit
 
-7.  FOOTER                 (minimal)
+## Audio
+
+- **BGM** — auto-play epic orchestral loop (Dm → Bb → F → C), synthesized via Web Audio API (kick, rim, hi-hat, bass, string pad, lead). ♪ button toggles stop/start. Respects browser autoplay policy (AudioContext resumed on first interaction).
+- **Success chime** — 3-oscillator ascending arpeggio (C5→E5, 0.6s) on download button clicks, also Web Audio API.
+
+## Deploy
+
+[![Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/roopaksai/Lockin-app-website)
+
+Connected to Vercel via GitHub — pushes to `main` auto-deploy.
