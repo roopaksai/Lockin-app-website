@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LockIn — Your Goal. On Every Unlock.</title>
+  <meta name="description"
+    content="LockIn turns your lock screen into a live progress system. See your countdown, track consistency, stay accountable — without opening the app.">
+  <link rel="icon" href="assets/icon.png">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #0A0A0A;
+      --surface: #141414;
+      --surface-light: #1E1E1E;
+      --surface-lighter: #2A2A2A;
+      --text: #E0E0E0;
+      --text-secondary: #999;
+      --text-muted: #666;
+      --text-dim: #444;
+      --accent: #FF8C00;
+      --accent-hover: #E67E00;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-light: rgba(255, 255, 255, 0.12);
+      --success: #4CAF50;
+      --font-display: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --container: 1400px;
+      --nav-height: 64px;
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      background: none;
+      color: inherit
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar {
+      width: 6px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg)
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--surface-lighter);
+      border-radius: 3px
+    }
+
+    /* ── Reveal animations ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    .reveal-delay-1 {
+      transition-delay: 0ms
+    }
+
+    .reveal-delay-2 {
+      transition-delay: 120ms
+    }
+
+    .reveal-delay-3 {
+      transition-delay: 240ms
+    }
+
+    .reveal-delay-4 {
+      transition-delay: 360ms
+    }
+
+    .reveal-delay-5 {
+      transition-delay: 480ms
+    }
+
+    .reveal-delay-6 {
+      transition-delay: 600ms
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      height: var(--nav-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      transition: background 0.4s, backdrop-filter 0.4s, border-color 0.4s;
+      border-bottom: 1px solid transparent;
+    }
+
+    nav.scrolled {
+      background: rgba(10, 10, 10, 0.78);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      border-bottom-color: var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 3px;
+      text-transform: uppercase
+    }
+
+    .nav-logo img {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px
+    }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      border-radius: var(--radius-md);
+      transition: background 0.3s, transform 0.2s;
+    }
+
+    .nav-cta:hover {
+      background: var(--accent-hover);
+      transform: scale(0.97)
+    }
+
+    .nav-cta:active {
+      transform: scale(0.94)
+    }
+
+    /* ── Hero ── */
+    #hero {
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      padding: calc(var(--nav-height) + 48px) 24px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #three-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: var(--container);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .hero-text {
+      max-width: 520px
+    }
+
+    .hero-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 100px;
+      background: var(--surface);
+    }
+
+    .hero-badge span {
+      color: var(--accent)
+    }
+
+    .hero-title {
+      font-size: clamp(2rem, 4.5vw, 3.75rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.08;
+      margin-bottom: 16px;
+    }
+
+    .hero-title .accent {
+      color: var(--accent)
+    }
+
+    .hero-sub {
+      font-size: clamp(0.95rem, 1.2vw, 1.1rem);
+      color: var(--text-secondary);
+      font-weight: 400;
+      line-height: 1.65;
+      margin-bottom: 32px;
+      max-width: 460px;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: clamp(0.85rem, 1vw, 0.95rem);
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      padding: 16px 32px;
+      border-radius: var(--radius-md);
+      transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-cta:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 32px rgba(255, 140, 0, 0.25)
+    }
+
+    .hero-cta:active {
+      transform: translateY(0) scale(0.97)
+    }
+
+    .hero-cta .icon {
+      font-size: 18px;
+      transition: transform 0.3s
+    }
+
+    .hero-cta:hover .icon {
+      transform: translateY(2px)
+    }
+
+    .hero-trust {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-weight: 400;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Phone Mockup + Comparison Slider ── */
+    .phone-wrapper {
+      display: flex;
+      justify-content: center;
+      perspective: 1200px
+    }
+
+    .phone-float {
+      animation: phoneFloat 4s ease-in-out infinite;
+      perspective: 1200px;
+    }
+
+    .phone-frame {
+      width: min(320px, 75vw);
+      aspect-ratio: 9/19.5;
+      background: var(--bg);
+      border-radius: 40px;
+      border: 3px solid var(--surface-lighter);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(255, 140, 0, 0.06);
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+      transform-style: preserve-3d;
+      transition: transform 0.15s ease;
+    }
+
+    @keyframes phoneFloat {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(-8px)
+      }
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 22px;
+      background: var(--bg);
+      border-radius: 0 0 14px 14px;
+      z-index: 10;
+    }
+
+    .phone-notch::after {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1A1A1A;
+      border: 1px solid #2A2A2A;
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      background: #000
+    }
+
+    .phone-bottom-bar {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--surface-lighter);
+      z-index: 10;
+    }
+
+    /* ── Comparison Slider ── */
+    .comparison {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      cursor: ew-resize;
+      touch-action: none
+    }
+
+    .comparison img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none
+    }
+
+    .comparison-left,
+    .comparison-right {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%
+    }
+
+    .comparison-left {
+      z-index: 1
+    }
+
+    .comparison-right {
+      z-index: 2
+    }
+
+    .slider-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--accent);
+      z-index: 3;
+      pointer-events: none;
+      box-shadow: 0 0 12px rgba(255, 140, 0, 0.4);
+    }
+
+    .slider-handle::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 20px rgba(255, 140, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.4);
+      transition: transform 0.2s;
+    }
+
+    .slider-handle::after {
+      content: '⟷';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      color: #000;
+      font-weight: 700;
+      z-index: 1;
+    }
+
+    .slider-handle:active::before {
+      transform: translate(-50%, -50%) scale(1.15)
+    }
+
+    .slider-label {
+      position: absolute;
+      bottom: 48px;
+      z-index: 5;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .slider-label-left {
+      left: 12px;
+      color: var(--text-muted)
+    }
+
+    .slider-label-right {
+      right: 12px;
+      color: var(--accent)
+    }
+
+    /* ── Section Common ── */
+    section {
+      padding: 96px 24px
+    }
+
+    .section-inner {
+      max-width: var(--container);
+      margin: 0 auto
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .section-label .accent {
+      color: var(--accent)
+    }
+
+    .section-title {
+      font-size: clamp(1.5rem, 3vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: clamp(0.9rem, 1.1vw, 1.05rem);
+      color: var(--text-secondary);
+      max-width: 580px;
+      line-height: 1.7;
+    }
+
+    /* ── Features ── */
+    #features {
+      background: var(--surface)
+    }
+
+    .features-grid {
+      display: grid;
+      gap: 24px;
+      margin-top: 48px
+    }
+
+    .feature-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: center;
+      background: var(--bg);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border);
+      padding: 32px;
+      transition: transform 0.2s, box-shadow 0.3s;
+      transform-style: preserve-3d;
+    }
+
+    .feature-row:hover {
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3)
+    }
+
+    .feature-row.full {
+      grid-template-columns: 1fr
+    }
+
+    .feature-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 800px;
+    }
+
+    .feature-visual .mini-phone {
+      width: min(200px, 40vw);
+      aspect-ratio: 9/19.5;
+      border-radius: 20px;
+      border: 2px solid var(--surface-lighter);
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      transition: transform 0.3s;
+    }
+
+    .feature-visual .mini-phone img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain
+    }
+
+    .feature-info h3 {
+      font-size: clamp(1.1rem, 1.5vw, 1.35rem);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    .feature-info h3 .accent {
+      color: var(--accent)
+    }
+
+    .feature-info p {
+      font-size: clamp(0.85rem, 1vw, 0.95rem);
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .feature-info ul {
+      list-style: none;
+      margin-top: 16px;
+      display: grid;
+      gap: 8px
+    }
+
+    .feature-info ul li {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .feature-info ul li::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* ── How It Works ── */
+    #how {
+      background: var(--bg)
+    }
+
+    .how-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      margin-top: 48px
+    }
+
+    .how-steps {
+      position: relative
+    }
+
+    .how-steps::before {
+      content: '';
+      position: absolute;
+      left: 23px;
+      top: 16px;
+      bottom: 16px;
+      width: 1px;
+      background: linear-gradient(to bottom, var(--border), transparent);
+    }
+
+    .how-step {
+      position: relative;
+      padding-left: 60px;
+      padding-bottom: 36px
+    }
+
+    .how-step:last-child {
+      padding-bottom: 0
+    }
+
+    .how-step-num {
+      position: absolute;
+      left: 0;
+      top: 2px;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .how-step:hover .how-step-num {
+      background: var(--accent);
+      color: #000
+    }
+
+    .how-step h4 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 4px
+    }
+
+    .how-step p {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 400px
+    }
+
+    .how-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .how-visual-inner {
+      width: 100%;
+      max-width: 460px;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: grid;
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .how-visual-inner img {
+      width: 100%;
+      height: auto;
+      display: block
+    }
+
+    /* ── Widget ── */
+    #widget {
+      background: var(--surface)
+    }
+
+    .widget-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+      margin-top: 48px;
+    }
+
+    .widget-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .widget-visual img {
+      width: 100%;
+      max-width: 520px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .widget-info h3 {
+      font-size: clamp(1.1rem, 1.5vw, 1.35rem);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .widget-info p {
+      font-size: clamp(0.88rem, 1vw, 0.95rem);
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .widget-info .badge-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap
+    }
+
+    .widget-info .badge {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      background: var(--surface);
+    }
+
+    /* ── CTA ── */
+    #cta {
+      padding: 120px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #cta::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 80%;
+      background: radial-gradient(ellipse at center, rgba(255, 140, 0, 0.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 600px;
+      margin: 0 auto
+    }
+
+    .cta-inner .section-title {
+      text-align: center
+    }
+
+    .cta-inner .section-sub {
+      text-align: center;
+      margin: 0 auto 32px
+    }
+
+    .cta-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: clamp(0.9rem, 1.1vw, 1rem);
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      padding: 18px 40px;
+      border-radius: var(--radius-md);
+      transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+      animation: ctaPulse 3s ease-in-out infinite;
+    }
+
+    .cta-button:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(255, 140, 0, 0.3)
+    }
+
+    .cta-button:active {
+      transform: scale(0.97)
+    }
+
+    .cta-button .icon {
+      font-size: 20px
+    }
+
+    @keyframes ctaPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 4px 20px rgba(255, 140, 0, 0.15)
+      }
+
+      50% {
+        box-shadow: 0 4px 40px rgba(255, 140, 0, 0.3)
+      }
+    }
+
+    .cta-trust {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-dim);
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    .footer-inner {
+      max-width: var(--container);
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px
+    }
+
+    footer .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase
+    }
+
+    footer .logo img {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px
+    }
+
+    footer p {
+      font-size: 12px;
+      color: var(--text-muted)
+    }
+
+    /* ── Responsive ── */
+    @media(max-width:900px) {
+      .hero-inner {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 40px
+      }
+
+      .hero-text {
+        max-width: 100%
+      }
+
+      .hero-sub {
+        margin: 0 auto 32px
+      }
+
+      .hero-trust {
+        text-align: center
+      }
+
+      .phone-frame {
+        width: min(260px, 65vw)
+      }
+
+      .feature-row {
+        grid-template-columns: 1fr;
+        padding: 24px
+      }
+
+      .feature-row.full {
+        grid-template-columns: 1fr
+      }
+
+      .feature-visual {
+        order: -1
+      }
+
+      .how-grid {
+        grid-template-columns: 1fr
+      }
+
+      .how-visual {
+        order: -1;
+        margin-bottom: 16px
+      }
+
+      .widget-grid {
+        grid-template-columns: 1fr;
+        text-align: center
+      }
+
+      .widget-info .badge-row {
+        justify-content: center
+      }
+
+      .widget-visual {
+        order: -1
+      }
+    }
+
+    @media(max-width:600px) {
+      nav {
+        padding: 0 16px
+      }
+
+      .nav-logo {
+        font-size: 15px;
+        letter-spacing: 2px
+      }
+
+      .nav-logo img {
+        width: 24px;
+        height: 24px
+      }
+
+      .nav-cta {
+        padding: 8px 16px;
+        font-size: 10px;
+        letter-spacing: 1px
+      }
+
+      #hero {
+        padding: calc(var(--nav-height) + 32px) 16px 40px
+      }
+
+      section {
+        padding: 64px 16px
+      }
+
+      .phone-frame {
+        width: min(220px, 70vw);
+        border-radius: 28px;
+        border-width: 2px
+      }
+
+      .phone-notch {
+        width: 70px;
+        height: 18px
+      }
+
+      .slider-handle::before {
+        width: 28px;
+        height: 28px
+      }
+
+      .slider-handle::after {
+        font-size: 11px
+      }
+
+      .slider-label {
+        font-size: 8px;
+        bottom: 36px
+      }
+
+      .feature-row {
+        padding: 20px;
+        border-radius: var(--radius-lg)
+      }
+
+      .how-step {
+        padding-left: 52px
+      }
+
+      .how-step-num {
+        width: 38px;
+        height: 38px;
+        font-size: 12px
+      }
+
+      .how-steps::before {
+        left: 18px
+      }
+
+      #cta {
+        padding: 80px 16px
+      }
+
+      .cta-button {
+        padding: 14px 28px;
+        font-size: 0.85rem;
+        width: 100%;
+        justify-content: center
+      }
+
+      footer .footer-inner {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px
+      }
+    }
+
+    @media(max-width:380px) {
+      .phone-frame {
+        width: min(180px, 75vw);
+        border-radius: 20px
+      }
+
+      .phone-notch {
+        width: 50px;
+        height: 14px;
+        top: 8px
+      }
+
+      .phone-notch::after {
+        width: 6px;
+        height: 6px;
+        top: 4px
+      }
+
+      .phone-bottom-bar {
+        width: 80px;
+        bottom: 4px
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══ Nav ═══ -->
+  <nav id="nav" role="navigation" aria-label="Main navigation">
+    <a href="#" class="nav-logo">
+      <img src="assets/icon.png" alt="LockIn logo" width="28" height="28">
+      LOCKIN
+    </a>
+    <a href="https://jrnbjwgzrpmvjgfoajib.supabase.co/storage/v1/object/public/SMR-app/lockin.apk" target="_blank"
+      rel="noopener" class="nav-cta">Download</a>
+  </nav>
+
+  <!-- ═══ Hero ═══ -->
+  <section id="hero">
+    <canvas id="three-canvas"></canvas>
+    <div class="hero-inner">
+      <div class="hero-text">
+        <div class="hero-badge reveal">Lock screen · <span>live countdown</span></div>
+        <h1 class="hero-title reveal reveal-delay-1">
+          Your Goal.<br><span class="accent">On Every Unlock.</span>
+        </h1>
+        <p class="hero-sub reveal reveal-delay-2">
+          LockIn turns your lock screen into a live progress system.
+          See your countdown, track consistency, stay accountable —
+          without opening a single app.
+        </p>
+        <a href="https://jrnbjwgzrpmvjgfoajib.supabase.co/storage/v1/object/public/SMR-app/lockin.apk" target="_blank"
+          rel="noopener" class="hero-cta reveal reveal-delay-3">
+          <span class="icon">↓</span> Download LockIn
+        </a>
+        <p class="hero-trust reveal reveal-delay-4">
+          Free · No ads · No account needed · Android &amp; iOS
+        </p>
+      </div>
+      <div class="phone-wrapper reveal reveal-delay-2" id="phoneWrapper">
+        <div class="phone-float">
+          <div class="phone-frame" id="phoneFrame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="comparison" id="comparison">
+                <div class="comparison-left" id="compLeft" style="clip-path:inset(0 50% 0 0)">
+                  <img src="assets/v1.jpg" alt="Progress in progress — dot grid mid-journey" draggable="false">
+                </div>
+                <div class="comparison-right" id="compRight" style="clip-path:inset(0 0 0 50%)">
+                  <img src="assets/v2.jpg" alt="Streak completed — all dots bright" draggable="false">
+                </div>
+                <div class="slider-handle" id="sliderHandle" style="left:50%"></div>
+                <span class="slider-label slider-label-left">Progressing</span>
+                <span class="slider-label slider-label-right">Completed</span>
+              </div>
+            </div>
+            <div class="phone-bottom-bar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Features ═══ -->
+  <section id="features">
+    <div class="section-inner">
+      <p class="section-label reveal"><span class="accent">✦</span> Features</p>
+      <h2 class="section-title reveal reveal-delay-1">Two modes. One purpose.</h2>
+      <p class="section-sub reveal reveal-delay-2">
+        Whether you're tracking a full year or a custom challenge, LockIn adapts to your timeline.
+      </p>
+      <div class="features-grid">
+        <div class="feature-row reveal" data-tilt>
+          <div class="feature-visual">
+            <div class="mini-phone"><img src="assets/normal.jpg" alt="Setup mode interface" loading="lazy"></div>
+          </div>
+          <div class="feature-info">
+            <h3><span class="accent">Setup</span> Mode</h3>
+            <p>Set your goal title, choose between Year or Custom countdown, and activate the wallpaper in one tap. A
+              live preview shows exactly how your lock screen will look.</p>
+            <ul>
+              <li>Goal title up to 24 characters</li>
+              <li>Full Year (365/366 days) or Custom duration</li>
+              <li>Real-time lock screen preview</li>
+            </ul>
+          </div>
+        </div>
+        <div class="feature-row reveal reveal-delay-1" data-tilt>
+          <div class="feature-info">
+            <h3><span class="accent">Progress</span> Mode</h3>
+            <p>Like a GitHub contribution graph, each day's dot color reflects your task completion ratio. Complete
+              everything for a bright dot, skip for a dim one.</p>
+            <ul>
+              <li>Add custom daily tasks</li>
+              <li>Toggle completion — streaks visible instantly</li>
+              <li>Auto-resets at midnight</li>
+            </ul>
+          </div>
+          <div class="feature-visual">
+            <div class="mini-phone"><img src="assets/progress.jpg" alt="Progress mode interface" loading="lazy"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ How It Works ═══ -->
+  <section id="how">
+    <div class="section-inner">
+      <p class="section-label reveal"><span class="accent">✦</span> How It Works</p>
+      <h2 class="section-title reveal reveal-delay-1">Set it once. See progress daily.</h2>
+      <p class="section-sub reveal reveal-delay-2">LockIn requires no daily effort. Configure it once and your lock
+        screen becomes your accountability dashboard.</p>
+      <div class="how-grid">
+        <div class="how-steps">
+          <div class="how-step reveal" style="--i:0">
+            <div class="how-step-num">1</div>
+            <h4>Set Your Goal</h4>
+            <p>Name your mission — "JEE 2026", "75 Hard", anything up to 24 characters. Short titles fit best on the
+              lock screen.</p>
+          </div>
+          <div class="how-step reveal reveal-delay-1" style="--i:1">
+            <div class="how-step-num">2</div>
+            <h4>Choose Countdown Mode</h4>
+            <p>Full Year (365/366 days) for annual goals, or Custom Days for any duration — 30, 90, 180 days, whatever
+              fits.</p>
+          </div>
+          <div class="how-step reveal reveal-delay-2" style="--i:2">
+            <div class="how-step-num">3</div>
+            <h4>Activate Live Wallpaper</h4>
+            <p>One tap sets your lock screen as a live progress dashboard. Current day pulses. Past days glow. Future
+              days wait.</p>
+          </div>
+          <div class="how-step reveal reveal-delay-3" style="--i:3">
+            <div class="how-step-num">4</div>
+            <h4>Enable Progress Mode</h4>
+            <p>Add daily tasks. Check them off. Each day's dot color reflects your completion ratio — building streaks
+              you can see.</p>
+          </div>
+          <div class="how-step reveal reveal-delay-4" style="--i:4">
+            <div class="how-step-num">5</div>
+            <h4>Customize Colors</h4>
+            <p>Pick your background, accent, completed, and remaining colors. Five presets for each. Make it yours.</p>
+          </div>
+          <div class="how-step reveal reveal-delay-5" style="--i:5">
+            <div class="how-step-num">6</div>
+            <h4>Add Home Screen Widget</h4>
+            <p>Your progress visible without even unlocking your phone. Works on Android home screen and iOS widgets.
+            </p>
+          </div>
+        </div>
+        <div class="how-visual reveal reveal-delay-3">
+          <div class="how-visual-inner">
+            <img src="assets/2.jpg" alt="Lock screen countdown preview" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Customization ═══ -->
+  <section id="customization" style="background:var(--surface)">
+    <div class="section-inner">
+      <p class="section-label reveal"><span class="accent">✦</span> Customization</p>
+      <h2 class="section-title reveal reveal-delay-1">Full Color Customization</h2>
+      <p class="section-sub reveal reveal-delay-2">Five background presets, six accent colors, four completed-day
+        tones, five remaining-day shades. Your wallpaper, your palette.</p>
+      <div class="widget-grid">
+        <div class="widget-visual reveal reveal-delay-3">
+          <img src="assets/settings.jpg" alt="Color customization settings screen">
+        </div>
+        <div class="widget-info reveal reveal-delay-4">
+          <h3><span class="accent">Full</span> Color Customization</h3>
+          <p>Five background presets, six accent colors, four completed-day tones, five remaining-day shades. Your
+            wallpaper, your palette.</p>
+          <div class="badge-row">
+            <span class="badge">5 backgrounds</span>
+            <span class="badge">6 accents</span>
+            <span class="badge">4 completed tones</span>
+            <span class="badge">5 remaining shades</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Widget Showcase ═══ -->
+  <section id="widget">
+    <div class="section-inner">
+      <p class="section-label reveal"><span class="accent">✦</span> Widget</p>
+      <h2 class="section-title reveal reveal-delay-1">Your progress. On your home screen.</h2>
+      <p class="section-sub reveal reveal-delay-2">The same countdown dot grid from your lock screen, available as a
+        widget. Glanceable progress without touching your phone.</p>
+      <div class="widget-grid">
+        <div class="widget-visual reveal reveal-delay-3">
+          <img src="assets/widget.jpg" alt="Home screen widget showing countdown">
+        </div>
+        <div class="widget-info reveal reveal-delay-4">
+          <h3><span class="accent">Always visible.</span> Always motivating.</h3>
+          <p>Pin the widget to your home screen for an at-a-glance view of your countdown. Works on Android (API 26+)
+            and iOS via WidgetKit. The same data, the same visual, zero effort.</p>
+          <div class="badge-row">
+            <span class="badge">Android 8+</span>
+            <span class="badge">iOS WidgetKit</span>
+            <span class="badge">3 sizes</span>
+            <span class="badge">Real-time sync</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CTA ═══ -->
+  <section id="cta">
+    <div class="cta-inner">
+      <h2 class="section-title reveal">Start seeing your progress.</h2>
+      <p class="section-sub reveal reveal-delay-1">No sign-up. No data collection. Just your goal, on every unlock.</p>
+      <a href="https://jrnbjwgzrpmvjgfoajib.supabase.co/storage/v1/object/public/SMR-app/lockin.apk" target="_blank"
+        rel="noopener" class="cta-button reveal reveal-delay-2">
+        <span class="icon">↓</span> Download LockIn for Android
+      </a>
+      <p class="cta-trust reveal reveal-delay-3">Free · No ads · No account needed</p>
+    </div>
+  </section>
+
+  <!-- ═══ Footer ═══ -->
+  <footer>
+    <div class="footer-inner">
+      <div class="logo">
+        <img src="assets/icon.png" alt="LockIn logo" width="22" height="22">
+        LOCKIN
+      </div>
+      <p>Built by Roopak Sai &middot; React Native &middot; Expo &middot; WidgetKit &middot; Android Live Wallpaper</p>
+    </div>
+  </footer>
+
+  <!-- ═══ Scripts ═══ -->
+  <script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js"
+  }
+}
+</script>
+  <script type="module">
+    import * as THREE from 'three';
+
+    /* ── Three.js 3D Dot Grid ── */
+    (function initThree() {
+      const canvas = document.getElementById('three-canvas');
+      if (!canvas) return;
+      const hero = document.getElementById('hero');
+      if (!hero) return;
+
+      const width = hero.offsetWidth;
+      const height = hero.offsetHeight;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+      camera.position.z = 8;
+
+      const renderer = new THREE.WebGLRenderer({
+        canvas,
+        alpha: true,
+        antialias: true,
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      const count = 1200;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const sizes = new Float32Array(count);
+
+      const palette = [
+        new THREE.Color('#FF8C00'),
+        new THREE.Color('#FFFFFF'),
+        new THREE.Color('#4A4A4A'),
+        new THREE.Color('#666666'),
+        new THREE.Color('#2A2A2A'),
+      ];
+
+      for (let i = 0; i < count; i++) {
+        const radius = 4 + Math.random() * 4;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta) * 0.6;
+        positions[i * 3 + 2] = radius * Math.cos(phi);
+
+        const c = palette[Math.floor(Math.random() * palette.length)];
+        colors[i * 3] = c.r;
+        colors[i * 3 + 1] = c.g;
+        colors[i * 3 + 2] = c.b;
+
+        sizes[i] = 0.04 + Math.random() * 0.08;
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+      const material = new THREE.PointsMaterial({
+        size: 0.08,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.5,
+        sizeAttenuation: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+
+      const dots = new THREE.Points(geometry, material);
+      scene.add(dots);
+
+      function resize() {
+        const w = hero.offsetWidth;
+        const h = hero.offsetHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
+      window.addEventListener('resize', resize);
+
+      function animate() {
+        requestAnimationFrame(animate);
+        dots.rotation.x += 0.00015;
+        dots.rotation.y += 0.0004;
+        dots.rotation.z += 0.00005;
+
+        const scrollProgress = Math.min(window.scrollY / hero.offsetHeight, 1);
+        material.opacity = 0.5 * (1 - scrollProgress);
+        dots.position.y = -scrollProgress * 2;
+
+        renderer.render(scene, camera);
+      }
+      animate();
+    })();
+
+    /* ── Comparison Slider ── */
+    (function initSlider() {
+      const container = document.getElementById('comparison');
+      const left = document.getElementById('compLeft');
+      const right = document.getElementById('compRight');
+      const handle = document.getElementById('sliderHandle');
+      if (!container || !left || !right || !handle) return;
+
+      let pos = 50;
+      let dragging = false;
+
+      function updateSlider(percent) {
+        pos = Math.max(5, Math.min(95, percent));
+        left.style.clipPath = `inset(0 ${100 - pos}% 0 0)`;
+        right.style.clipPath = `inset(0 0 0 ${pos}%)`;
+        handle.style.left = `${pos}%`;
+      }
+
+      function onMove(clientX) {
+        const rect = container.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const percent = (x / rect.width) * 100;
+        updateSlider(percent);
+      }
+
+      container.addEventListener('mousedown', (e) => { dragging = true; onMove(e.clientX); });
+      document.addEventListener('mousemove', (e) => { if (dragging) onMove(e.clientX); });
+      document.addEventListener('mouseup', () => { dragging = false; });
+
+      container.addEventListener('touchstart', (e) => {
+        dragging = true;
+        onMove(e.touches[0].clientX);
+      }, { passive: true });
+      container.addEventListener('touchmove', (e) => {
+        if (dragging) onMove(e.touches[0].clientX);
+      }, { passive: true });
+      container.addEventListener('touchend', () => { dragging = false; });
+    })();
+
+    /* ── Nav Scroll Effect ── */
+    (function navScroll() {
+      const nav = document.getElementById('nav');
+      if (!nav) return;
+      let ticking = false;
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            nav.classList.toggle('scrolled', window.scrollY > 40);
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
+    })();
+
+    /* ── Scroll Reveal (IntersectionObserver) ── */
+    (function scrollReveal() {
+      const els = document.querySelectorAll('.reveal');
+      if (!els.length) return;
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+      els.forEach((el) => obs.observe(el));
+    })();
+
+    /* ── 3D Tilt on Feature Cards ── */
+    (function tiltCards() {
+      const cards = document.querySelectorAll('[data-tilt]');
+      if (!cards.length) return;
+      cards.forEach((card) => {
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width - 0.5;
+          const y = (e.clientY - rect.top) / rect.height - 0.5;
+          card.style.transform =
+            `perspective(1000px) rotateY(${x * 6}deg) rotateX(${-y * 6}deg)`;
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg)';
+        });
+      });
+    })();
+
+    /* ── Phone Tilt Parallax ── */
+    (function phoneTilt() {
+      const wrapper = document.getElementById('phoneWrapper');
+      const frame = document.getElementById('phoneFrame');
+      if (!wrapper || !frame) return;
+      wrapper.addEventListener('mousemove', (e) => {
+        const rect = wrapper.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        frame.style.transform = `rotateY(${x * 8}deg) rotateX(${-y * 8}deg)`;
+      });
+      wrapper.addEventListener('mouseleave', () => {
+        frame.style.transition = 'transform 0.4s ease';
+        frame.style.transform = '';
+        setTimeout(() => { frame.style.transition = 'transform 0.15s ease'; }, 400);
+      });
+    })();
+
+    /* ── Success Sound ── */
+    (function initSound() {
+      let ctx = null;
+
+      function getCtx() {
+        if (!ctx) {
+          const Ctor = window.AudioContext || window.webkitAudioContext;
+          if (!Ctor) return null;
+          ctx = new Ctor();
+        }
+        if (ctx.state === 'suspended') ctx.resume();
+        return ctx;
+      }
+
+      function play() {
+        const ac = getCtx();
+        if (!ac) return;
+        try {
+          const now = ac.currentTime;
+          const t = now;
+
+          const master = ac.createGain();
+          master.gain.setValueAtTime(0.22, t);
+          master.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
+          master.connect(ac.destination);
+
+          const osc1 = ac.createOscillator();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(523.25, t);
+          osc1.frequency.linearRampToValueAtTime(659.25, t + 0.1);
+          const g1 = ac.createGain();
+          g1.gain.setValueAtTime(0.5, t);
+          g1.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          osc1.connect(g1);
+          g1.connect(master);
+          osc1.start(t);
+          osc1.stop(t + 0.3);
+
+          const osc2 = ac.createOscillator();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(659.25, t + 0.1);
+          const g2 = ac.createGain();
+          g2.gain.setValueAtTime(0.45, t + 0.1);
+          g2.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+          osc2.connect(g2);
+          g2.connect(master);
+          osc2.start(t + 0.1);
+          osc2.stop(t + 0.55);
+
+          const osc3 = ac.createOscillator();
+          osc3.type = 'sine';
+          osc3.frequency.setValueAtTime(1569.75, t);
+          const g3 = ac.createGain();
+          g3.gain.setValueAtTime(0.1, t);
+          g3.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+          osc3.connect(g3);
+          g3.connect(master);
+          osc3.start(t);
+          osc3.stop(t + 0.2);
+        } catch { }
+      }
+
+      document.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href*="lockin.apk"], .hero-cta, .nav-cta, .cta-button');
+        if (link) play();
+      });
+    })();
+
+    console.log('LockIn — Your Goal. On Every Unlock.');
+  </script>
+</body>
+
+</html>
