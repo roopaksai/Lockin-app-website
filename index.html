@@ -477,19 +477,17 @@
       top: 0;
       bottom: 0;
       width: 2px;
-      background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        rgba(255,140,0,0.6) 8%,
-        rgba(255,140,0,1) 30%,
-        rgba(255,140,0,1) 70%,
-        rgba(255,140,0,0.6) 92%,
-        transparent 100%
-      );
+      background: linear-gradient(to bottom,
+          transparent 0%,
+          rgba(255, 140, 0, 0.6) 8%,
+          rgba(255, 140, 0, 1) 30%,
+          rgba(255, 140, 0, 1) 70%,
+          rgba(255, 140, 0, 0.6) 92%,
+          transparent 100%);
       z-index: 10;
       pointer-events: none;
       transform: translateX(-50%);
-      box-shadow: 0 0 8px rgba(255,140,0,0.35);
+      box-shadow: 0 0 8px rgba(255, 140, 0, 0.35);
     }
 
     /* Top cap dot */
@@ -503,11 +501,11 @@
       height: 44px;
       border-radius: 50%;
       background: #fff;
-      border: 2.5px solid rgba(255,140,0,0.9);
+      border: 2.5px solid rgba(255, 140, 0, 0.9);
       box-shadow:
-        0 0 0 6px rgba(255,140,0,0.15),
-        0 4px 20px rgba(0,0,0,0.5),
-        0 0 24px rgba(255,140,0,0.35);
+        0 0 0 6px rgba(255, 140, 0, 0.15),
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        0 0 24px rgba(255, 140, 0, 0.35);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
@@ -531,9 +529,9 @@
     .comparison:active .slider-handle::before {
       transform: translate(-50%, -50%) scale(1.12);
       box-shadow:
-        0 0 0 8px rgba(255,140,0,0.2),
-        0 6px 24px rgba(0,0,0,0.5),
-        0 0 32px rgba(255,140,0,0.5);
+        0 0 0 8px rgba(255, 140, 0, 0.2),
+        0 6px 24px rgba(0, 0, 0, 0.5),
+        0 0 32px rgba(255, 140, 0, 0.5);
     }
 
     /* ── Section Common ── */
@@ -1635,10 +1633,15 @@
       });
     })();
 
-    /* ── BGM: Epic Orchestral Loop (Web Audio API) ── */
+    /* ── BGM: Calm Ambient Lo-Fi Loop (Web Audio API) ──
+       Vibe: slow chord pads + pentatonic arpeggio + soft sub-bass.
+       No drums. No percussion. Pure focus atmosphere.
+    ── */
     (function initBGM() {
-      const BPM = 80, BEAT = 60 / BPM, BAR = BEAT * 4, LOOP = BAR * 8;
       let ac = null, playing = false, timer = null, nextBlock = 0, masterGain = null;
+
+      /* Tempo — very slow, ambient feel */
+      const BPM = 60, BEAT = 60 / BPM, BAR = BEAT * 4, LOOP = BAR * 8;
 
       function getAC() {
         if (!ac) try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { }
@@ -1648,136 +1651,133 @@
 
       function out(g) { if (masterGain) g.connect(masterGain); }
 
-      function kick(ctx, t, v) {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.setValueAtTime(120, t);
-        o.frequency.exponentialRampToValueAtTime(35, t + 0.08);
-        g.gain.setValueAtTime(v || .5, t);
-        g.gain.exponentialRampToValueAtTime(.001, t + .12);
-        o.connect(g);
-        out(g);
-        o.start(t);
-        o.stop(t + .12);
-      }
-
-      function rim(ctx, t, v) {
-        const buf = ctx.createBuffer(1, ctx.sampleRate * .08, ctx.sampleRate), d = buf.getChannelData(0);
-        for (let i = 0; i < buf.length; i++) d[i] = Math.random() * 2 - 1;
-        const n = ctx.createBufferSource();
-        n.buffer = buf;
-        const f = ctx.createBiquadFilter();
-        f.type = 'highpass';
-        f.frequency.value = 2000;
+      /* Soft reverb simulation — allpass chain */
+      function makeReverb(ctx) {
+        const chain = [];
+        [200, 400, 800, 1600].forEach(f => {
+          const ap = ctx.createBiquadFilter();
+          ap.type = 'allpass';
+          ap.frequency.value = f;
+          ap.Q.value = 1.5;
+          chain.push(ap);
+        });
+        for (let i = 0; i < chain.length - 1; i++) chain[i].connect(chain[i + 1]);
         const g = ctx.createGain();
-        g.gain.setValueAtTime(v || .15, t);
-        g.gain.exponentialRampToValueAtTime(.001, t + .07);
-        n.connect(f);
-        f.connect(g);
+        g.gain.value = 0.28;
+        chain[chain.length - 1].connect(g);
         out(g);
-        n.start(t);
-        n.stop(t + .08);
+        return chain[0]; /* input */
       }
 
-      function hat(ctx, t, v) {
-        const buf = ctx.createBuffer(1, ctx.sampleRate * .03, ctx.sampleRate), d = buf.getChannelData(0);
-        for (let i = 0; i < buf.length; i++) d[i] = Math.random() * 2 - 1;
-        const n = ctx.createBufferSource();
-        n.buffer = buf;
-        const f = ctx.createBiquadFilter();
-        f.type = 'highpass';
-        f.frequency.value = 5000;
-        const g = ctx.createGain();
-        g.gain.setValueAtTime(v || .04, t);
-        g.gain.exponentialRampToValueAtTime(.001, t + .02);
-        n.connect(f);
-        f.connect(g);
-        out(g);
-        n.start(t);
-        n.stop(t + .03);
-      }
-
-      function bass(ctx, t, freq, dur, v) {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.value = freq;
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(v || .12, t + .03);
-        g.gain.linearRampToValueAtTime(v || .12, t + dur - .03);
-        g.gain.linearRampToValueAtTime(.001, t + dur);
-        o.connect(g);
-        out(g);
-        o.start(t);
-        o.stop(t + dur);
-      }
-
-      function pad(ctx, t, freqs, dur, v) {
+      /* Gentle sine pad chord — slow attack / slow release */
+      function pad(ctx, t, freqs, dur, vol, reverb) {
         const g = ctx.createGain();
         g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(v || .04, t + .3);
-        g.gain.linearRampToValueAtTime(v || .04, t + dur - .5);
-        g.gain.linearRampToValueAtTime(.001, t + dur);
+        g.gain.linearRampToValueAtTime(vol, t + 1.2);
+        g.gain.setValueAtTime(vol, t + dur - 1.5);
+        g.gain.linearRampToValueAtTime(0, t + dur);
         out(g);
+        if (reverb) g.connect(reverb);
         freqs.forEach((f, i) => {
           const o = ctx.createOscillator();
-          o.type = 'sawtooth';
+          o.type = 'sine';
           o.frequency.value = f;
-          o.detune.value = (i - 1) * 5;
+          o.detune.value = (i - 1) * 3; /* tiny chorus spread */
           const og = ctx.createGain();
-          og.gain.value = .35 / freqs.length;
-          o.connect(og);
-          og.connect(g);
-          o.start(t);
-          o.stop(t + dur);
+          og.gain.value = 1 / freqs.length;
+          o.connect(og); og.connect(g);
+          o.start(t); o.stop(t + dur);
         });
       }
 
-      function lead(ctx, t, freq, dur, v) {
+      /* Bright triangle overtone layer — subtle shimmer */
+      function shimmer(ctx, t, freq, dur, vol) {
         const o = ctx.createOscillator(), g = ctx.createGain();
         o.type = 'triangle';
         o.frequency.value = freq;
-        g.gain.setValueAtTime(v || .025, t);
-        g.gain.linearRampToValueAtTime(.001, t + dur);
-        o.connect(g);
-        out(g);
-        o.start(t);
-        o.stop(t + dur);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol, t + 0.8);
+        g.gain.linearRampToValueAtTime(0, t + dur);
+        o.connect(g); out(g);
+        o.start(t); o.stop(t + dur);
+      }
+
+      /* Soft sub-bass — barely heard, just felt */
+      function sub(ctx, t, freq, dur, vol) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol, t + 0.4);
+        g.gain.linearRampToValueAtTime(vol, t + dur - 0.4);
+        g.gain.linearRampToValueAtTime(0, t + dur);
+        o.connect(g); out(g);
+        o.start(t); o.stop(t + dur);
+      }
+
+      /* Pentatonic arpeggio — sparse, dreamy, high register */
+      function arp(ctx, t, notes, stepDur, vol) {
+        notes.forEach((freq, i) => {
+          const at = t + i * stepDur;
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = freq;
+          g.gain.setValueAtTime(0, at);
+          g.gain.linearRampToValueAtTime(vol, at + 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, at + stepDur * 2.5);
+          o.connect(g); out(g);
+          o.start(at); o.stop(at + stepDur * 3);
+        });
       }
 
       function schedule() {
         if (!playing || !ac || !masterGain) return;
         const ctx = ac, now = ctx.currentTime;
-        const start = Math.max(now + .02, nextBlock);
-        if (start > now + .5) { nextBlock = start; setTimeout(schedule, (start - now) * 1000 - 40); return; }
+        const start = Math.max(now + 0.05, nextBlock);
+        if (start > now + 0.6) {
+          nextBlock = start;
+          setTimeout(schedule, (start - now) * 1000 - 50);
+          return;
+        }
 
+        const reverb = makeReverb(ctx);
+
+        /*
+          8-bar loop: 2 chord progressions × 4 bars
+          Key: D minor / F major feel — warm, introspective
+          Chords (all in Hz, stacked as root/3rd/5th/octave):
+            Dm  = D2  F2  A2   (73.4, 87.3, 110)
+            Bb  = Bb1 D2  F2   (58.3, 73.4, 87.3)
+            F   = F2  A2  C3   (87.3, 110, 130.8)
+            C   = C2  E2  G2   (65.4, 82.4, 98)
+        */
         const chords = [
-          { r: 73.42, f: [146.83, 174.61, 220.00] },
-          { r: 58.27, f: [116.54, 146.83, 174.61] },
-          { r: 87.31, f: [87.31, 110.00, 130.81] },
-          { r: 65.41, f: [130.81, 164.81, 196.00] },
+          { root: 36.7,  freqs: [73.4,  98.0,  110.0, 146.8], arp5: [587.3, 659.3, 739.9, 659.3, 587.3] },
+          { root: 29.1,  freqs: [58.3,  73.4,  87.3,  110.0], arp5: [523.3, 587.3, 659.3, 587.3, 523.3] },
+          { root: 43.7,  freqs: [87.3,  110.0, 130.8, 174.6], arp5: [698.5, 783.9, 880.0, 783.9, 698.5] },
+          { root: 32.7,  freqs: [65.4,  82.4,  98.0,  130.8], arp5: [523.3, 587.3, 659.3, 523.3, 440.0] },
         ];
-        const melody = [440, 349.23, 392, 293.66];
-        const harmony = [523.25, 440, 392, 349.23];
 
         chords.forEach((ch, i) => {
           const bs = start + i * BAR * 2;
-          const b1 = bs, b2 = bs + BAR;
 
-          for (let j = 0; j < 8; j++) hat(ctx, b1 + j * BEAT / 2, .04);
-          kick(ctx, b1, .5);
-          kick(ctx, b1 + BEAT * 1.5, .4);
-          rim(ctx, b1 + BEAT * 2, .2);
-          bass(ctx, b1, ch.r, BAR * 2, .1);
-          pad(ctx, b1, ch.f, BAR * 2, .035);
+          /* Pad holds for the full 2-bar block */
+          pad(ctx, bs, ch.freqs, BAR * 2, 0.032, reverb);
 
-          if (i === 0) melody.forEach((mf, mi) => lead(ctx, b1 + mi * BEAT * .75, mf, BEAT * .6, .022));
-          if (i === 2) harmony.forEach((hf, hi) => lead(ctx, b1 + hi * BEAT * .75, hf, BEAT * .6, .022));
+          /* Shimmer on high note, enters half a bar in */
+          shimmer(ctx, bs + BEAT * 2, ch.freqs[3] * 2, BAR, 0.008);
 
-          for (let j = 0; j < 8; j++) hat(ctx, b2 + j * BEAT / 2, .04);
-          kick(ctx, b2, .45);
-          kick(ctx, b2 + BEAT * 2.5, .35);
-          rim(ctx, b2 + BEAT * 2, .18);
-          rim(ctx, b2 + BEAT * 2.5, .12);
+          /* Sub pulse at bar start and bar 2 */
+          sub(ctx, bs,          ch.root, BAR, 0.055);
+          sub(ctx, bs + BAR,    ch.root, BAR, 0.04);
+
+          /* Sparse arpeggio every other bar, offset by 1.5 beats */
+          if (i % 2 === 0) {
+            arp(ctx, bs + BEAT * 1.5, ch.arp5, BEAT * 0.55, 0.012);
+          } else {
+            /* Second half: arp comes in later, more sparse */
+            arp(ctx, bs + BEAT * 3, ch.arp5.slice(0, 3), BEAT * 0.7, 0.01);
+          }
         });
 
         nextBlock = start + LOOP;
@@ -1793,7 +1793,7 @@
             const now = ac.currentTime;
             masterGain.gain.cancelScheduledValues(now);
             masterGain.gain.setValueAtTime(masterGain.gain.value, now);
-            masterGain.gain.linearRampToValueAtTime(0.001, now + 0.08);
+            masterGain.gain.linearRampToValueAtTime(0.001, now + 1.2); /* slow fade out */
           } catch (e) { }
         }
       }
@@ -1803,7 +1803,8 @@
         if (timer) { clearTimeout(timer); timer = null; }
         if (masterGain) { try { masterGain.disconnect(); } catch (e) { } }
         masterGain = ac.createGain();
-        masterGain.gain.value = 1;
+        masterGain.gain.setValueAtTime(0, ac.currentTime);
+        masterGain.gain.linearRampToValueAtTime(1, ac.currentTime + 2); /* fade in */
         masterGain.connect(ac.destination);
         playing = true;
         nextBlock = ac.currentTime;
@@ -1820,12 +1821,13 @@
 
         // Auto-start BGM on page load
         if (getAC()) {
-          playing = true;
-          nextBlock = ac.currentTime;
           if (masterGain) { try { masterGain.disconnect(); } catch (e) { } }
           masterGain = ac.createGain();
-          masterGain.gain.value = 1;
+          masterGain.gain.setValueAtTime(0, ac.currentTime);
+          masterGain.gain.linearRampToValueAtTime(1, ac.currentTime + 2);
           masterGain.connect(ac.destination);
+          playing = true;
+          nextBlock = ac.currentTime;
           schedule();
           btn.classList.add('playing');
 
